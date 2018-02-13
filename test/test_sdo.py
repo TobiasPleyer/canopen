@@ -43,7 +43,7 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x40\x18\x10\x01\x00\x00\x00\x00'),
             (RX, b'\x43\x18\x10\x01\x04\x00\x00\x00')
         ]
-        vendor_id = self.network[2].sdo[0x1018][1].raw
+        vendor_id = self.network[2].get_value(0x1018, 1)
         self.assertEqual(vendor_id, 4)
 
         # UNSIGNED8 without padded data part (see issue #5)
@@ -51,7 +51,7 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x40\x00\x14\x02\x00\x00\x00\x00'),
             (RX, b'\x4f\x00\x14\x02\xfe')
         ]
-        trans_type = self.network[2].sdo[0x1400]['Transmission type RPDO 1'].raw
+        trans_type = self.network[2].get_value(0x1400, 'Transmission type RPDO 1')
         self.assertEqual(trans_type, 254)
 
     def test_expedited_download(self):
@@ -59,7 +59,7 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x2b\x17\x10\x00\xa0\x0f\x00\x00'),
             (RX, b'\x60\x17\x10\x00\x00\x00\x00\x00')
         ]
-        self.network[2].sdo[0x1017].raw = 4000
+        self.network[2].set_value(0x1017, 0, 4000)
 
     def test_segmented_upload(self):
         self.data = [
@@ -74,7 +74,7 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
             (RX, b'\x15\x69\x6E\x73\x20\x21\x00\x00')
         ]
-        device_name = self.network[2].sdo[0x1008].raw
+        device_name = self.network[2].get_value(0x1008)
         self.assertEqual(device_name, "Tiny Node - Mega Domains !")
 
     def test_segmented_download(self):
@@ -86,7 +86,7 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x13\x73\x74\x72\x69\x6e\x67\x00'),
             (RX, b'\x30\x00\x20\x00\x00\x00\x00\x00')
         ]
-        self.network[2].sdo['Writable string'].raw = 'A long string'
+        self.network[2].set_value('Writable string', 0, 'A long string')
 
     def test_block_download(self):
         self.data = [
@@ -102,8 +102,10 @@ class TestSDO(unittest.TestCase):
             (RX, b'\xa1\x00\x00\x00\x00\x00\x00\x00')
         ]
         data = b'A really really long string...'
-        fp = self.network[2].sdo['Writable string'].open(
-            'wb', size=len(data), block_transfer=True)
+        fp = self.network[2].sdo.open('Writable string',
+                                      mode='wb',
+                                      size=len(data),
+                                      block_transfer=True)
         fp.write(data)
         fp.close()
 
@@ -120,7 +122,7 @@ class TestSDO(unittest.TestCase):
             (RX, b'\xc9\x40\xe1\x00\x00\x00\x00\x00'),
             (TX, b'\xa1\x00\x00\x00\x00\x00\x00\x00')
         ]
-        fp = self.network[2].sdo[0x1008].open('r', block_transfer=True)
+        fp = self.network[2].sdo.open(0x1008, mode='r', block_transfer=True)
         data = fp.read()
         fp.close()
         self.assertEqual(data, 'Tiny Node - Mega Domains !')
@@ -136,7 +138,7 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x0f\x00\x00\x00\x00\x00\x00\x00'),
             (RX, b'\x20\x00\x20\x00\x00\x00\x00\x00')
         ]
-        fp = self.network[2].sdo['Writable string'].open('wb')
+        fp = self.network[2].sdo.open('Writable string', mode='wb')
         fp.write(b'1234')
         fp.write(b'56789')
         fp.close()
@@ -151,7 +153,7 @@ class TestSDO(unittest.TestCase):
             (RX, b'\x80\x18\x10\x01\x11\x00\x09\x06')
         ]
         with self.assertRaises(canopen.SdoAbortedError) as cm:
-            _ = self.network[2].sdo[0x1018][1].raw
+            _ = self.network[2].get_value(0x1018, 1)
         self.assertEqual(cm.exception.code, 0x06090011)
 
 

@@ -6,7 +6,7 @@ class TestDataConversions(unittest.TestCase):
 
     def test_boolean(self):
         var = od.Variable("Test BOOLEAN", 0x1000)
-        var.data_type = od.BOOLEAN
+        var.data_type = od.datatypes.BOOLEAN
         self.assertEqual(var.decode_raw(b"\x01"), True)
         self.assertEqual(var.decode_raw(b"\x00"), False)
         self.assertEqual(var.encode_raw(True), b"\x01")
@@ -14,25 +14,25 @@ class TestDataConversions(unittest.TestCase):
 
     def test_unsigned8(self):
         var = od.Variable("Test UNSIGNED8", 0x1000)
-        var.data_type = od.UNSIGNED8
+        var.data_type = od.datatypes.UNSIGNED8
         self.assertEqual(var.decode_raw(b"\xff"), 255)
         self.assertEqual(var.encode_raw(254), b"\xfe")
 
     def test_unsigned16(self):
         var = od.Variable("Test UNSIGNED16", 0x1000)
-        var.data_type = od.UNSIGNED16
+        var.data_type = od.datatypes.UNSIGNED16
         self.assertEqual(var.decode_raw(b"\xfe\xff"), 65534)
         self.assertEqual(var.encode_raw(65534), b"\xfe\xff")
 
     def test_unsigned32(self):
         var = od.Variable("Test UNSIGNED32", 0x1000)
-        var.data_type = od.UNSIGNED32
+        var.data_type = od.datatypes.UNSIGNED32
         self.assertEqual(var.decode_raw(b"\xfc\xfd\xfe\xff"), 4294901244)
         self.assertEqual(var.encode_raw(4294901244), b"\xfc\xfd\xfe\xff")
 
     def test_integer8(self):
         var = od.Variable("Test INTEGER8", 0x1000)
-        var.data_type = od.INTEGER8
+        var.data_type = od.datatypes.INTEGER8
         self.assertEqual(var.decode_raw(b"\xff"), -1)
         self.assertEqual(var.decode_raw(b"\x7f"), 127)
         self.assertEqual(var.encode_raw(-2), b"\xfe")
@@ -40,7 +40,7 @@ class TestDataConversions(unittest.TestCase):
 
     def test_integer16(self):
         var = od.Variable("Test INTEGER16", 0x1000)
-        var.data_type = od.INTEGER16
+        var.data_type = od.datatypes.INTEGER16
         self.assertEqual(var.decode_raw(b"\xfe\xff"), -2)
         self.assertEqual(var.decode_raw(b"\x01\x00"), 1)
         self.assertEqual(var.encode_raw(-2), b"\xfe\xff")
@@ -48,13 +48,13 @@ class TestDataConversions(unittest.TestCase):
 
     def test_integer32(self):
         var = od.Variable("Test INTEGER32", 0x1000)
-        var.data_type = od.INTEGER32
+        var.data_type = od.datatypes.INTEGER32
         self.assertEqual(var.decode_raw(b"\xfe\xff\xff\xff"), -2)
         self.assertEqual(var.encode_raw(-2), b"\xfe\xff\xff\xff")
 
     def test_visible_string(self):
         var = od.Variable("Test VISIBLE_STRING", 0x1000)
-        var.data_type = od.VISIBLE_STRING
+        var.data_type = od.datatypes.VISIBLE_STRING
         self.assertEqual(var.decode_raw(b"abcdefg"), "abcdefg")
         self.assertEqual(var.encode_raw("testing"), b"testing")
 
@@ -63,7 +63,7 @@ class TestAlternativeRepresentations(unittest.TestCase):
 
     def test_phys(self):
         var = od.Variable("Test INTEGER16", 0x1000)
-        var.data_type = od.INTEGER16
+        var.data_type = od.datatypes.INTEGER16
         var.factor = 0.1
 
         self.assertAlmostEqual(var.decode_phys(128), 12.8)
@@ -71,7 +71,7 @@ class TestAlternativeRepresentations(unittest.TestCase):
 
     def test_desc(self):
         var = od.Variable("Test UNSIGNED8", 0x1000)
-        var.data_type = od.UNSIGNED8
+        var.data_type = od.datatypes.UNSIGNED8
         var.add_value_description(0, "Value 0")
         var.add_value_description(1, "Value 1")
         var.add_value_description(3, "Value 3")
@@ -82,7 +82,7 @@ class TestAlternativeRepresentations(unittest.TestCase):
 
     def test_bits(self):
         var = od.Variable("Test UNSIGNED8", 0x1000)
-        var.data_type = od.UNSIGNED8
+        var.data_type = od.datatypes.UNSIGNED8
         var.add_bit_definition("BIT 0", [0])
         var.add_bit_definition("BIT 2 and 3", [2, 3])
 
@@ -127,7 +127,7 @@ class TestArray(unittest.TestCase):
     def test_subindexes(self):
         array = od.Array("Test Array", 0x1000)
         last_subindex = od.Variable("Last subindex", 0x1000, 0)
-        last_subindex.data_type = od.UNSIGNED8
+        last_subindex.data_type = od.datatypes.UNSIGNED8
         array.add_member(last_subindex)
         array.add_member(od.Variable("Test Variable", 0x1000, 1))
         array.add_member(od.Variable("Test Variable 2", 0x1000, 2))

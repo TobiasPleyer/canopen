@@ -3,6 +3,7 @@ import unittest
 import canopen
 import logging
 import time
+import struct
 
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -20,13 +21,11 @@ class TestSDO(unittest.TestCase):
         cls.network1 = canopen.Network()
         cls.network1.connect("test", bustype="virtual")
         cls.remote_node = cls.network1.add_node(2, EDS_PATH)
+        cls.remote_node2 = cls.network1.add_node(3, EDS_PATH)
 
         cls.network2 = canopen.Network()
         cls.network2.connect("test", bustype="virtual")
         cls.local_node = cls.network2.create_node(2, EDS_PATH)
-
-        cls.remote_node2 = cls.network1.add_node(3, EDS_PATH)
-
         cls.local_node2 = cls.network2.create_node(3, EDS_PATH)
 
     @classmethod
@@ -35,52 +34,48 @@ class TestSDO(unittest.TestCase):
         cls.network2.disconnect()
 
     def test_expedited_upload(self):
-        self.local_node.sdo[0x1400][1].raw = 0x99
-        vendor_id = self.remote_node.sdo[0x1400][1].raw
+        self.local_node.set_value(0x1400, 1, 0x99)
+        vendor_id = self.local_node.get_value(0x1400, 1)
         self.assertEqual(vendor_id, 0x99)
 
     def test_block_upload_switch_to_expedite_upload(self):
         with self.assertRaises(canopen.SdoCommunicationError) as context:
-            self.remote_node.sdo[0x1008].open('r', block_transfer=True)
+            self.remote_node.sdo.open(0x1008,
+                                      mode='r',
+                                      block_transfer=True)
         # We get this since the sdo client don't support the switch
         # from block upload to expedite upload
         self.assertEqual("Unexpected response 0x41", str(context.exception))
 
-    def test_block_download_not_supported(self):
-        data = b"TEST DEVICE"
-        with self.assertRaises(canopen.SdoAbortedError) as context:
-            self.remote_node.sdo[0x1008].open('wb',
-                                              size=len(data),
-                                              block_transfer=True)
-        self.assertEqual(context.exception.code, 0x05040001)
-
     def test_expedited_upload_default_value_visible_string(self):
-        device_name = self.remote_node.sdo["Manufacturer device name"].raw
-        self.assertEqual(device_name, "TEST DEVICE")
+        device_name = self.remote_node.get_data("Manufacturer device name")
+        self.assertEqual(device_name, b"TEST DEVICE")
 
     def test_expedited_upload_default_value_real(self):
-        sampling_rate = self.remote_node.sdo["Sensor Sampling Rate (Hz)"].raw
+        sampling_rate = self.remote_node.get_value("Sensor Sampling Rate (Hz)")
         self.assertAlmostEqual(sampling_rate, 5.2, places=2)
 
     def test_segmented_upload(self):
-        self.local_node.sdo["Manufacturer device name"].raw = "Some cool device"
-        device_name = self.remote_node.sdo["Manufacturer device name"].data
+        self.local_node.set_data("Manufacturer device name", 0, b"Some cool device")
+        device_name = self.remote_node.get_data("Manufacturer device name")
         self.assertEqual(device_name, b"Some cool device")
 
     def test_expedited_download(self):
-        self.remote_node.sdo["Identity object"]["Vendor-ID"].raw = 0xfeff
-        vendor_id = self.local_node.sdo["Identity object"]["Vendor-ID"].raw
+        vendor_data = struct.pack("<I", 0xfeff)
+        self.remote_node.set_data("Identity object", "Vendor-ID", vendor_data)
+        vendor_id = self.local_node.get_value("Identity object", "Vendor-ID")
         self.assertEqual(vendor_id, 0xfeff)
 
     def test_segmented_download(self):
-        self.remote_node.sdo["Manufacturer device name"].raw = "Another cool device"
-        device_name = self.local_node.sdo["Manufacturer device name"].data
+        self.remote_node.set_data("Manufacturer device name", 0, b"Another cool device")
+        device_name = self.local_node.get_data("Manufacturer device name", 0)
         self.assertEqual(device_name, b"Another cool device")
 
     def test_slave_send_heartbeat(self):
         # Setting the heartbeat time should trigger hearbeating
         # to start
-        self.remote_node.sdo["Producer heartbeat time"].raw = 1000
+        heartbeat_value = struct.pack("<H", 1000)
+        self.remote_node.set_data("Producer heartbeat time", 0, heartbeat_value)
         state = self.remote_node.nmt.wait_for_heartbeat()
         self.local_node.nmt.stop_heartbeat()
         # The NMT master will change the state INITIALISING (0)
@@ -89,7 +84,7 @@ class TestSDO(unittest.TestCase):
 
     def test_nmt_state_initializing_to_preoper(self):
         # Initialize the heartbeat timer
-        self.local_node.sdo["Producer heartbeat time"].raw = 1000
+        self.local_node.set_value("Producer heartbeat time", 0, 1000)
         self.local_node.nmt.stop_heartbeat()
         # This transition shall start the heartbeating
         self.local_node.nmt.state = 'INITIALISING'
@@ -114,12 +109,12 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(slave_state, 'OPERATIONAL')
 
     def test_two_nodes_on_the_bus(self):
-        self.local_node.sdo["Manufacturer device name"].raw = "Some cool device"
-        device_name = self.remote_node.sdo["Manufacturer device name"].data
+        self.local_node.set_value("Manufacturer device name", 0, "Some cool device")
+        device_name = self.remote_node.get_data("Manufacturer device name")
         self.assertEqual(device_name, b"Some cool device")
 
-        self.local_node2.sdo["Manufacturer device name"].raw = "Some cool device2"
-        device_name = self.remote_node2.sdo["Manufacturer device name"].data
+        self.local_node2.set_value("Manufacturer device name", 0, "Some cool device2")
+        device_name = self.remote_node2.get_data("Manufacturer device name")
         self.assertEqual(device_name, b"Some cool device2")
 
     def test_start_two_remote_nodes(self):
@@ -160,11 +155,6 @@ class TestSDO(unittest.TestCase):
             _ = self.remote_node.sdo.upload(0x1018, 100)
         # Should be Subindex does not exist
         self.assertEqual(cm.exception.code, 0x06090011)
-
-        with self.assertRaises(canopen.SdoAbortedError) as cm:
-            _ = self.remote_node.sdo[0x1001].data
-        # Should be Resource not available
-        self.assertEqual(cm.exception.code, 0x060A0023)
 
     def _some_read_callback(self, **kwargs):
         self._kwargs = kwargs
