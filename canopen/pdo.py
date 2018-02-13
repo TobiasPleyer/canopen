@@ -75,6 +75,9 @@ class RemotePdoNode(collections.Mapping):
     def setup(self):
         pass
 
+    def stop(self):
+        pass
+
 
 class LocalPdoNode(collections.Mapping):
     """Represents a slave unit."""
@@ -112,7 +115,7 @@ class LocalPdoNode(collections.Mapping):
     def stop(self):
         """Stop transmission of all TPDOs."""
         for tpdo in self.tx.values():
-            tpdo.stop()
+            tpdo.stop_cyclic_transmit()
 
     def setup(self):
         for pdos in (self.rx, self.tx):
@@ -172,10 +175,12 @@ class PDOBase(object):
                 self.update_map_config()
 
     def update_map_config(self):
-        raise NotImplementedError
+        # TODO
+        return
 
     def update_com_config(self):
-        raise NotImplementedError
+        # TODO
+        return
 
     def __getitem__(self, key):
         if isinstance(key, int):

@@ -1,8 +1,13 @@
+import logging
 from ..sdo import SdoClient
 from ..nmt import NmtMaster
 from ..emcy import EmcyConsumer
 from ..pdo import RemotePdoNode
 from .base import BaseNode
+from ..sdo import SdoAbortedError
+
+
+logger = logging.getLogger(__name__)
 
 
 class RemoteNode(BaseNode):
@@ -48,11 +53,41 @@ class RemoteNode(BaseNode):
         self.pdo.network = None
         self.nmt.network = None
 
-    def get_data(self, index, subindex):
+    def get_data(self, index, subindex=0):
+        try:
+            entry = self.get_object(index, subindex)
+        except SdoAbortedError:
+            return
+        index = entry.index
+        subindex = entry.subindex
         return self.sdo.upload(index, subindex)
 
     def set_data(self, index, subindex, data):
+        try:
+            entry = self.get_object(index, subindex)
+        except SdoAbortedError:
+            return
+        index = entry.index
+        subindex = entry.subindex
         return self.sdo.download(index, subindex, data)
+
+    def get_value(self, index, subindex=0):
+        try:
+            entry = self.get_object(index, subindex)
+        except SdoAbortedError:
+            return
+        index = entry.index
+        subindex = entry.subindex
+        return entry.decode_raw(self.sdo.upload(index, subindex))
+
+    def set_value(self, index, subindex, value):
+        try:
+            entry = self.get_object(index, subindex)
+        except SdoAbortedError:
+            return
+        index = entry.index
+        subindex = entry.subindex
+        return self.sdo.download(index, subindex, entry.encode_raw(value))
 
     def store(self, subindex=1):
         """Store parameters in non-volatile memory.

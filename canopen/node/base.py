@@ -1,5 +1,6 @@
 from collections import defaultdict
 from .. import objectdictionary
+from ..sdo import SdoAbortedError
 
 
 class BaseNode(object):
@@ -28,3 +29,6 @@ class BaseNode(object):
         # usually entails a change of behaviour. The traps are a mechanism to
         # invoke the behaviour changing functions
         self.data_store_traps = defaultdict(list)
+
+    def get_object(self, index, subindex):
+        return self.object_dictionary.get_object(index, subindex)
