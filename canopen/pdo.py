@@ -168,19 +168,17 @@ class PDOBase(object):
 
     def on_config_change(self, transaction):
         logger.info("Change detected")
-        for index, subindex, data in transaction:
-            if index == self.com_index:
-                self.update_com_config()
-            if index == self.map_index:
-                self.update_map_config()
-
-    def update_map_config(self):
-        # TODO
-        return
-
-    def update_com_config(self):
-        # TODO
-        return
+        com_index_already_updated = False
+        map_index_already_updated = False
+        for index, _, _ in transaction:
+            if index == self.com_index and not com_index_already_updated:
+                com_index_already_updated = True
+                logger.info("Communication parameters for PDO "
+                            "0x%X have changed" % self.cob_id)
+            if index == self.map_index and not map_index_already_updated:
+                map_index_already_updated = True
+                logger.info("Mapping parameters for PDO "
+                            "0x%X have changed" % self.cob_id)
 
     def __getitem__(self, key):
         if isinstance(key, int):

@@ -1,6 +1,5 @@
 from collections import defaultdict
 from .. import objectdictionary
-from ..sdo import SdoAbortedError
 
 
 class BaseNode(object):
