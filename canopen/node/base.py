@@ -22,3 +22,11 @@ class BaseNode(object):
         self.object_dictionary = object_dictionary
 
         self.id = node_id or self.object_dictionary.node_id
+        self.data_store = {}
+        self.current_state = "PRE-OPERATIONAL"
+
+    def read(self, index, subindex):
+        raise NotImplementedError
+
+    def write(self, index, subindex):
+        raise NotImplementedError
